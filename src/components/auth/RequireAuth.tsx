@@ -4,18 +4,16 @@ import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { auth } from "@/lib/firebase/client";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const authedUser = user ?? auth.currentUser;
 
   useEffect(() => {
-    if (!loading && !authedUser) {
+    if (!loading && !user) {
       router.replace("/");
     }
-  }, [authedUser, loading, router]);
+  }, [user, loading, router]);
 
   if (loading) {
     return (
@@ -27,7 +25,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!authedUser) {
+  if (!user) {
     return null;
   }
 

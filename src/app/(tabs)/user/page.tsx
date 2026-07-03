@@ -1,7 +1,6 @@
 "use client";
 
 import { signOut } from "firebase/auth";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { auth } from "@/lib/firebase/client";
@@ -14,11 +13,9 @@ function formatProvider(providerId: string | undefined): string {
 
 export default function UserPage() {
   const { user } = useAuth();
-  const router = useRouter();
 
   async function handleSignOut() {
     await signOut(auth);
-    router.replace("/");
   }
 
   const providerId = user?.providerData[0]?.providerId;

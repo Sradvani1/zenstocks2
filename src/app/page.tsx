@@ -6,7 +6,7 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
-  signInWithRedirect,
+  signInWithPopup,
 } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,12 +29,11 @@ export default function LandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const authedUser = user ?? auth.currentUser;
-
   useEffect(() => {
-    if (loading || !authedUser) return;
-    router.replace("/folio");
-  }, [loading, authedUser, router]);
+    if (!loading && user) {
+      router.replace("/folio");
+    }
+  }, [loading, user, router]);
 
   async function handleEmailSubmit(e: React.FormEvent, submitMode: AuthMode) {
     e.preventDefault();
@@ -43,10 +42,8 @@ export default function LandingPage() {
     try {
       if (submitMode === "signup") {
         await createUserWithEmailAndPassword(auth, email, password);
-        router.replace("/holdings");
       } else {
         await signInWithEmailAndPassword(auth, email, password);
-        router.replace("/folio");
       }
     } catch (err) {
       const code = (err as { code?: string }).code ?? "";
@@ -56,20 +53,22 @@ export default function LandingPage() {
     }
   }
 
-  function handleGoogleSignIn() {
+  async function handleGoogleSignIn() {
     setError(null);
-    void signInWithRedirect(auth, googleProvider);
+    setSubmitting(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? "";
+      if (code !== "auth/popup-closed-by-user") {
+        setError(AUTH_ERRORS[code] ?? "Google sign-in failed. Please try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  if (loading) {
-    return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] items-center justify-center px-6">
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      </div>
-    );
-  }
-
-  if (authedUser) {
+  if (loading || user) {
     return (
       <div className="mx-auto flex min-h-dvh w-full max-w-[430px] items-center justify-center px-6">
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -164,6 +163,7 @@ export default function LandingPage() {
               size="lg"
               className="min-h-11 w-full"
               onClick={handleGoogleSignIn}
+              disabled={submitting}
             >
               Continue with Google
             </Button>
