@@ -5,7 +5,7 @@ Implementation plans derived from [SPEC.md](../SPEC.md) §9. Each phase ships as
 | Phase | Focus | Status | Plan |
 | ----- | ----- | ------ | ---- |
 | 1 | PWA shell, Firebase/Vercel wiring, CI | Complete | [phase-1.md](phase-1.md) |
-| 2 | Auth (email + Google) | In progress | [phase-2.md](phase-2.md) |
+| 2 | Auth (email + Google) | Complete | [phase-2.md](phase-2.md) |
 | 3 | Holdings CRUD | Planned | — |
 | 4 | yfinance market data pipeline | Planned | — |
 | 5 | Portfolio dashboard | Planned | — |

@@ -1,6 +1,7 @@
 # Phase 2 — Authentication
 
-**Status:** In progress  
+**Status:** ✅ Complete — merged to `main` via [PR #2](https://github.com/Sradvani1/zenstocks2/pull/2) on 2026-07-02  
+**Merge commit:** `5f65d05`
 **Parent spec:** [SPEC.md](../SPEC.md) §4.1, §5, §7, §9 Phase 2  
 **Branch:** `phase-2/auth`
 
