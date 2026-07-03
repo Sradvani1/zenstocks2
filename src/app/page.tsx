@@ -8,12 +8,13 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
 } from "firebase/auth";
+import { collection, getCountFromServer } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { auth } from "@/lib/firebase/client";
+import { auth, db } from "@/lib/firebase/client";
 import { AUTH_ERRORS } from "@/lib/auth";
 
 const googleProvider = new GoogleAuthProvider();
@@ -30,9 +31,26 @@ export default function LandingPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) {
-      router.replace("/folio");
+    if (loading || !user) return;
+
+    const uid = user.uid;
+    let cancelled = false;
+
+    async function redirectSignedInUser() {
+      try {
+        const snap = await getCountFromServer(collection(db, "users", uid, "holdings"));
+        if (cancelled) return;
+        router.replace(snap.data().count === 0 ? "/holdings" : "/folio");
+      } catch {
+        if (!cancelled) router.replace("/folio");
+      }
     }
+
+    void redirectSignedInUser();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loading, user, router]);
 
   async function handleEmailSubmit(e: React.FormEvent, submitMode: AuthMode) {

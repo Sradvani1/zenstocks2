@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { signOut } from "firebase/auth";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { auth } from "@/lib/firebase/client";
+import { cn } from "@/lib/utils";
 
 function formatProvider(providerId: string | undefined): string {
   if (providerId === "google.com") return "Google";
@@ -33,7 +35,13 @@ export default function UserPage() {
           <dd className="mt-1 font-medium">{formatProvider(providerId)}</dd>
         </div>
       </dl>
-      <div className="mt-8">
+      <div className="mt-8 flex flex-col gap-3">
+        <Link
+          href="/holdings"
+          className={cn(buttonVariants({ variant: "outline" }), "min-h-11 w-full")}
+        >
+          Update holdings
+        </Link>
         <Button variant="outline" className="min-h-11 w-full" onClick={handleSignOut}>
           Sign out
         </Button>

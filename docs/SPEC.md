@@ -19,7 +19,7 @@ A personal portfolio progressive web app that feels native on iOS and Android wh
 - **User data in Firebase:** Auth, holdings, chat metadata, and cached articles live in Firestore under strict security rules.
 - **AI with grounding:** News and chat responses must cite retrievable context (search results, vector store files, quote snapshots) — no fabricated prices or dates.
 - **Incremental solidity:** Each sprint phase ships a working, testable vertical slice; no "big bang" integration at the end.
-- **Cost-aware:** Shared quote cache across users; scheduled jobs only for symbols present in at least one portfolio.
+- **Cost-aware:** Shared quote cache across users; scheduled jobs run daily for the fixed symbol universe (~100 largest US equities at launch), not per-user duplicates.
 - **Daily cadence:** All market data updates once per day after US market close. No intraday quotes, no user-triggered refresh. UI always labels data with its as-of date.
 - **Portfolio-only:** Track symbols and shares — no cost basis, no unrealized gain/loss, no tax or brokerage features.
 
@@ -38,7 +38,7 @@ A personal portfolio progressive web app that feels native on iOS and Android wh
 | Server logic (Python) | Firebase Cloud Functions 2nd gen (Python) | yfinance ingestion only — **once daily after market close** |
 | Server logic (Vercel) | Next.js Route Handlers | OpenAI chat streaming, vector store sync (cron) |
 | Market data | yfinance (Python CF) | Quotes, history, fundamentals — **single daily batch, no intraday refresh** |
-| News curation | Gemini API via Google AI Studio + Google Search grounding (Firebase CF) | API key in Firebase Secret Manager; one daily article per active symbol |
+| News curation | Gemini API via Google AI Studio + Google Search grounding (Firebase CF) | API key in Firebase Secret Manager; one daily article per universe symbol |
 | Chat | OpenAI Responses API + Conversations API + Vector Store (Vercel) | `file_search` over earnings summaries and curated articles; default model: latest stable GPT with file-search support (locked at Phase 9 planning) |
 | Secrets | Firebase Secret Manager (Gemini) + Vercel env vars (OpenAI) | API keys never in client bundle |
 | CI/CD | GitHub Actions + Vercel preview deploys | Firebase deploy via CLI in CI |
@@ -99,11 +99,11 @@ flowchart TB
 
 **Read path (quotes, articles):** Client reads Firestore directly (with security rules). Quotes are always served from the daily cache — never live-scraped on page load, never user-refreshed.
 
-**Write path (holdings):** Client writes to `users/{uid}/holdings` via Firestore SDK; a Firestore trigger maintains `symbols/active` registry for schedulers. New symbols receive quote data on the **next scheduled daily batch** (no on-demand ingest).
+**Write path (holdings):** Client writes to `users/{uid}/holdings` via Firestore SDK; symbol must exist in `symbols/universe`. A Firestore trigger maintains `symbols/active` holder counts (usage tracking, not pipeline input). No on-demand ingest.
 
-**Ingestion path:** Cloud Scheduler triggers Python CF **once daily ~6:30 PM ET** (after market close) → yfinance → upsert `quotes/{symbol}`, `quotes/{symbol}/history/{date}`, and `quotes/{symbol}/fundamentals/latest`.
+**Ingestion path:** Cloud Scheduler triggers Python CF **once daily ~6:30 PM ET** (after market close) → for each symbol in `symbols/universe` → yfinance → upsert `quotes/{symbol}`, `quotes/{symbol}/history/{date}`, and `quotes/{symbol}/fundamentals/latest`.
 
-**News path:** Cloud Scheduler triggers Node CF **~7:30 PM ET** (after ingestion completes) → Gemini with search grounding → writes `articles/{symbol}/{yyyy-mm-dd}`.
+**News path:** Cloud Scheduler triggers Node CF **~7:30 PM ET** (after ingestion completes) → for each symbol in `symbols/universe` → Gemini with search grounding → writes `articles/{symbol}/{yyyy-mm-dd}`.
 
 **Chat path:** Client → Vercel Route Handler `/api/chat` (Firebase ID token verified) → OpenAI Responses API with `conversation` ID (Conversations API), `file_search`, and fresh portfolio `instructions` each turn → SSE stream to client. OpenAI retains turn-by-turn context; Firestore stores thread list + message mirror for fast UI.
 
@@ -124,13 +124,14 @@ flowchart TB
 - Sign out from User screen
 
 ### 4.2 Portfolio holdings
-- CRUD holdings: `symbol` (validated ticker), `shares` (positive number)
+- CRUD holdings: `symbol` (from fixed universe), `shares` (positive number)
 - **No cost basis, no gain/loss, no purchase price** — portfolio tracks symbols and share counts only
 - **Limit: 25 symbols per user** (enforced in security rules + client validation)
-- Symbol validation: uppercase US tickers, 1–10 chars, letters and limited punctuation (`.`, `-`) — supports symbols like `BRK.B`, `GOOGL`
-- Bulk edit screen (`/holdings`) reachable from User settings
+- **Symbol universe:** ~100 largest US equities at launch (`symbols/universe`); expandable later by seeding additional docs — users may only hold universe members
+- Symbol format: uppercase tickers, 1–10 chars, letters and limited punctuation (`.`, `-`) — supports symbols like `BRK.B`, `GOOGL`
+- Bulk edit screen (`/holdings`) reachable from User settings; symbol entry via picker/autocomplete from universe (not arbitrary tickers)
 - Empty state prompts user to add first holding
-- Newly added symbols show pending state until next daily data batch: "Quote data available after next market close"
+- If today's quote doc is not yet available (batch pending): "Quote data available after next market close"
 
 ### 4.3 Portfolio dashboard (`/folio`)
 - Total portfolio market value and day change ($ and %) based on **prior close data**
@@ -226,9 +227,15 @@ users/{uid}/holdings/{symbol}
   createdAt: timestamp
   updatedAt: timestamp
 
+symbols/universe/{symbol}
+  symbol: string          // document ID = symbol; pickable stocks only
+  name: string            // display name
+  rank: number            // sort order (1 = largest at seed time)
+  addedAt: timestamp
+
 symbols/active/{symbol}
   symbol: string
-  holderCount: number     // maintained by trigger; used by schedulers
+  holderCount: number     // maintained by onHoldingWrite; usage tracking, not scheduler input
   lastRequestedAt: timestamp
 
 quotes/{symbol}
@@ -292,7 +299,7 @@ pipelineRuns/{jobName}_{date}      // e.g. refreshMarketData_2026-07-02
 
 | Function | Trigger | Responsibility |
 |----------|---------|----------------|
-| `refreshMarketData` | Scheduler: daily ~6:30 PM ET (weekdays, after market close) | For each symbol in `symbols/active`: fetch close price, append daily OHLCV bar, refresh fundamentals via yfinance → upsert `quotes/{symbol}`, `history`, `fundamentals/latest` |
+| `refreshMarketData` | Scheduler: daily ~6:30 PM ET (weekdays, after market close) | For each symbol in `symbols/universe`: fetch close price, append daily OHLCV bar, refresh fundamentals via yfinance → upsert `quotes/{symbol}`, `history`, `fundamentals/latest` |
 
 Single combined function replaces separate quote/history/fundamentals schedulers. Skips US market holidays. No intraday runs. On failure: **3 retries with exponential backoff**; log errors to Cloud Logging; write `pipelineRuns/{date}` status doc for observability.
 
@@ -302,8 +309,8 @@ Single combined function replaces separate quote/history/fundamentals schedulers
 |----------|---------|----------------|
 | `onHoldingWrite` | Firestore: `users/{uid}/holdings/{symbol}` | Update `symbols/active` holder counts (transactional) |
 | `onUserDelete` | Firebase Auth: user deleted | Cascade delete `users/{uid}` subtree (holdings, threads); decrement `symbols/active`; delete OpenAI Conversations via Vercel internal call or queued cleanup |
-| `enrichFundamentals` | Scheduler: daily ~7:00 PM ET (after `refreshMarketData`) | Read raw fundamentals from Firestore; Gemini (AI Studio) generates `earningsSummary` prose → write back to `fundamentals/latest` |
-| `generateDailyArticle` | Scheduler: daily ~7:30 PM ET (after `enrichFundamentals`) | Per active symbol: Gemini + search → `articles/{symbol}/{date}` |
+| `enrichFundamentals` | Scheduler: daily ~7:00 PM ET (after `refreshMarketData`) | For each symbol in `symbols/universe`: read raw fundamentals from Firestore; Gemini (AI Studio) generates `earningsSummary` prose → write back to `fundamentals/latest` |
+| `generateDailyArticle` | Scheduler: daily ~7:30 PM ET (after `enrichFundamentals`) | For each symbol in `symbols/universe`: Gemini + search → `articles/{symbol}/{date}` |
 | `recordPipelineRun` | Called by each scheduled job | Upsert `pipelineRuns/{jobName}_{date}` with status, duration, error |
 
 **Pipeline ordering:** Jobs are time-staggered schedulers (not a single orchestrator). Each job checks that its upstream dependency completed successfully via `pipelineRuns` before proceeding; skips if upstream failed after retries.
@@ -329,9 +336,10 @@ Single combined function replaces separate quote/history/fundamentals schedulers
 
 ### Firestore rules (summary)
 - `users/{uid}`: read/write only if `request.auth.uid == uid`
-- `users/{uid}/holdings/*`: read/write only if owner; validate shares > 0, symbol format, max 25 holdings per user
+- `users/{uid}/holdings/*`: read/write only if owner; validate shares > 0, symbol format, symbol exists in `symbols/universe`, max 25 holdings per user
 - `users/{uid}/chatThreads/*` and `messages/*`: read/write only if owner
 - `quotes/*`, `articles/*`: authenticated read; **no client write**
+- `symbols/universe/*`: authenticated read; **no client write** (seed/admin only)
 - `symbols/active/*`: no client read/write (service accounts only)
 - `pipelineRuns/*`: no client read/write (service accounts + admin SDK only)
 - Deny all other paths by default
@@ -340,7 +348,7 @@ Single combined function replaces separate quote/history/fundamentals schedulers
 - **OpenAI:** Vercel env vars only (`OPENAI_API_KEY`, `OPENAI_VECTOR_STORE_ID`)
 - **Gemini:** Firebase Secret Manager, accessed only in Node CF
 - **Firebase Admin:** Vercel env var (`FIREBASE_SERVICE_ACCOUNT_JSON` or individual fields) for token verification and Firestore writes from `/api/chat`
-- yfinance: no API key; batch all active symbols in single Python CF invocation
+- yfinance: no API key; batch all universe symbols (~100) in single Python CF invocation
 - Firebase web config: public (standard)
 
 ### Chat abuse controls
@@ -442,17 +450,20 @@ Deliverables:
 ---
 
 ### Phase 4 — Market data pipeline (yfinance)
-**Goal:** Daily batch populates Firestore for active symbols.
+**Goal:** Seed symbol universe; daily batch populates shared Firestore data for all universe symbols.
 
 Deliverables:
-- Python CF: `refreshMarketData` (combined quotes + history + fundamentals)
+- Seed `symbols/universe` (~100 largest US equities) from repo data file + deploy script
+- Python CF: `refreshMarketData` (combined quotes + history + fundamentals) — iterates `symbols/universe`
 - Cloud Scheduler: weekdays ~6:30 PM ET
 - Firestore schemas for `quotes/*`
+- Security rules: authenticated read on `quotes/*` and `symbols/universe/*`; holdings create requires universe membership
+- `/holdings` UI: universe picker/autocomplete (replaces free-text any ticker)
 - Manual HTTP trigger for dev/testing
-- Security rules: authenticated read on quotes
-- `symbols/active` read access for Python CF service account
 
-**Exit criteria:** Adding AAPL to portfolio and waiting for next scheduled run (or manual trigger) populates quote + ≥ 90 days history; pending state shown before first batch.
+**Exit criteria:** After seed + one batch run, any universe symbol has quote + ≥ 90 days history; user can only add universe symbols; pending state shown only when today's batch has not completed.
+
+**ADR:** [0002-fixed-symbol-universe.md](adr/0002-fixed-symbol-universe.md)
 
 ---
 
@@ -579,6 +590,8 @@ zenstocks2/
   functions/
     node/                # TypeScript Cloud Functions
     python/              # yfinance Cloud Functions
+  data/
+    universe.json        # seed list for symbols/universe (~100 at launch)
   firebase.json
   firestore.rules
   firestore.indexes.json
@@ -607,7 +620,7 @@ zenstocks2/
 
 - PWA installable on iOS Safari and Android Chrome
 - Daily data pipeline completes by 9 PM ET on trading days
-- Daily article coverage: 100% of active symbols by 9 PM ET
+- Daily article coverage: 100% of universe symbols by 9 PM ET
 - Chat p95 latency: first token < 3s
 - Zero client-side exposure of OpenAI/Gemini keys
 - Core flow completion: sign up → add holding → see portfolio (after next close) → read article → ask chat question
@@ -624,7 +637,7 @@ zenstocks2/
 | Vercel function timeout on chat stream | Use streaming response; set `maxDuration` appropriately on Pro plan |
 | OpenAI conversation 30-day TTL on raw responses | Use Conversations API (not subject to 30-day response TTL) with `store: true` |
 | OpenAI conversation deletion | Delete Conversation object when user deletes thread; don't orphan |
-| New symbol has no data until next close | Pending state in UI; set expectations at add time |
+| Today's quote not yet available (batch in progress) | Pending state in UI; universe data pre-warmed daily — user sees message only until batch completes |
 | Single Firebase project risks PR previews touching prod data | Use emulators locally; optional `dev_` prefix flag in env for preview deploys (Phase 10 decision) |
 | iOS PWA limitations | Document install steps; safe-area CSS; no reliance on push for core flows |
 
@@ -664,12 +677,12 @@ No test coverage targets at launch beyond critical-path E2E and rules tests.
 | User price refresh | None | No pull-to-refresh, no on-demand yfinance calls |
 | Cost basis / P&L | Out of scope permanently for v1+ | Portfolio = symbols + shares only |
 | Portfolio history | Client-side Firestore aggregation | 25 × 365 data points is trivial; removes unnecessary CF |
-| New symbol data | Wait for next daily batch | Consistent with daily-only principle |
+| New symbol data | Universe pre-warmed daily; UI pending only until today's batch completes | Fixed universe (~100); shared `quotes/*` always maintained for all universe symbols |
 | Auth | Email/password + Google | Previously locked |
 | Holdings limit | 25 symbols | Previously locked |
 | Vector store | Single shared store with symbol metadata | Cost control; portfolio context injected at query time |
 | Earnings summaries for RAG | `enrichFundamentals` Node CF (~7 PM ET) generates prose via Gemini, stored in `fundamentals/latest.earningsSummary` | Chat needs prose summaries, not raw EPS arrays; runs after Python ingest, before articles |
-| Symbol universe | US equities and ADRs only | yfinance coverage; validate against known exchange suffixes |
+| Symbol universe | ~100 largest US equities at launch (`symbols/universe`); expandable via seed | Curated product; pipelines batch all universe symbols daily; holdings restricted to universe members ([ADR 0002](adr/0002-fixed-symbol-universe.md)) |
 | Chat conversation state | OpenAI Conversations API (durable) + Firestore mirror | OpenAI retains multi-turn context; Firestore holds thread list + messages for UI; portfolio `instructions` re-sent each turn |
 | Chat threads | Multiple per user at launch | Each thread = one OpenAI Conversation object |
 | Chat deletion | Per-thread delete + "Clear all chats" in User settings | Removes Firestore docs and OpenAI Conversation objects |
