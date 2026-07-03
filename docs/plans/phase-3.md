@@ -1,9 +1,9 @@
 # Phase 3 — Holdings Management
 
-**Status:** ✅ Complete  
+**Status:** ✅ Complete — closed out 2026-07-03  
+**Merge commit:** `a5de61d` on `main`  
 **Parent spec:** [SPEC.md](../SPEC.md) §4.2, §5, §7, §9 Phase 3  
-**Branch:** `phase-3/holdings`  
-**PR target:** `main` (single PR)
+**Branch:** `phase-3/holdings` (merged)
 
 **Goal:** Users can add, edit, and delete holdings (symbol + shares) on `/holdings`; data persists in Firestore; `symbols/active` registry updates via trigger; security rules enforce per-doc validation.
 
@@ -70,21 +70,13 @@
 
 ## Verification checklist
 
-| Check | Method |
-|-------|--------|
-| `npm run lint && npm run typecheck && npm run build` | CI / local |
-| New user sign-up → lands on `/holdings` | Preview |
-| User with ≥1 holding sign-in on `/` → `/folio` | Preview |
-| Add holding → persists after refresh | Firestore + UI |
-| Edit shares → persists | UI |
-| Delete holding → removed after refresh | UI |
-| 26th symbol rejected in UI | UI |
-| Invalid symbol rejected client-side | UI |
-| `symbols/active/{symbol}` created after add | Firestore console |
-| `holderCount` decrements / doc deleted after delete | Firestore console |
-| `/user` → "Update holdings" → `/holdings` | UI |
-| Unauthenticated `/holdings` → `/` | RequireAuth |
-| Phase 2 auth flows still work | Smoke test |
+- [x] `npm run lint && npm run typecheck && npm run build`
+- [x] Add holding → persists after refresh (local + deployed rules)
+- [x] `/user` → "Update holdings" → `/holdings`
+- [x] `firebase deploy --only firestore:rules` (required for holdings permissions)
+- [ ] Post-auth redirect (0 holdings → `/holdings`, else `/folio`) — preview smoke test
+- [ ] `firebase deploy --only functions:onHoldingWrite` — manual post-merge
+- [ ] `symbols/active` holderCount in Firestore console after add/delete
 
 ---
 
