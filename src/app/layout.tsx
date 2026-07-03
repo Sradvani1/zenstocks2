@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import type { Metadata, Viewport } from "next";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -57,7 +58,7 @@ export default function RootLayout({
       <body className="min-h-dvh bg-background font-sans text-foreground">
         <SerwistProvider swUrl="/serwist/sw.js">
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-            {children}
+            <AuthProvider>{children}</AuthProvider>
           </ThemeProvider>
         </SerwistProvider>
       </body>
