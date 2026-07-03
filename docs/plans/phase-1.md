@@ -2,6 +2,8 @@
 
 **Parent spec:** [SPEC.md](../SPEC.md)
 
+> Stack deviations from locked Phase 1 literals (shadcn New York, `@serwist/next`): see [ADR 0001](../adr/0001-phase1-shadcn-serwist.md).
+
 **Branch:** `phase-1/foundation`
 
 **PR title:** `feat: scaffold zenstocks2 PWA shell with Firebase and Vercel wiring`
