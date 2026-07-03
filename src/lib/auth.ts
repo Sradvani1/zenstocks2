@@ -1,12 +1,32 @@
-import { getRedirectResult, type User } from "firebase/auth";
+import { getAdditionalUserInfo, getRedirectResult, type User, type UserCredential } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
 
-let redirectResultPromise: ReturnType<typeof getRedirectResult> | null = null;
+let cachedRedirectResult: UserCredential | null | undefined;
 
-export function getRedirectResultOnce() {
-  redirectResultPromise ??= getRedirectResult(auth);
+function resolveRedirectResult(): Promise<UserCredential | null> {
+  if (typeof window === "undefined") {
+    return Promise.resolve(null);
+  }
+  return auth.authStateReady().then(() => getRedirectResult(auth));
+}
+
+let redirectResultPromise: Promise<UserCredential | null> | null = null;
+
+function getRedirectResultPromise(): Promise<UserCredential | null> {
+  redirectResultPromise ??= resolveRedirectResult();
   return redirectResultPromise;
+}
+
+export async function getRedirectResultOnce(): Promise<UserCredential | null> {
+  if (cachedRedirectResult === undefined) {
+    cachedRedirectResult = await getRedirectResultPromise();
+  }
+  return cachedRedirectResult;
+}
+
+export function getIsNewUserFromRedirect(result: UserCredential): boolean {
+  return getAdditionalUserInfo(result)?.isNewUser ?? false;
 }
 
 export const AUTH_ERRORS: Record<string, string> = {
@@ -18,6 +38,8 @@ export const AUTH_ERRORS: Record<string, string> = {
   "auth/too-many-requests": "Too many attempts. Please try again later.",
   "auth/network-request-failed": "Network error. Check your connection.",
   "auth/popup-closed-by-user": "Sign-in was cancelled.",
+  "auth/unauthorized-domain": "This domain is not authorized for sign-in. Contact support.",
+  "auth/operation-not-allowed": "Google sign-in is not enabled.",
 };
 
 function getAuthProvider(user: User): "email" | "google" {

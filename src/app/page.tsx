@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createUserWithEmailAndPassword,
-  getAdditionalUserInfo,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
   signInWithRedirect,
@@ -12,7 +11,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { auth } from "@/lib/firebase/client";
-import { AUTH_ERRORS, getRedirectResultOnce, resolvePostAuthPath } from "@/lib/auth";
+import {
+  AUTH_ERRORS,
+  getIsNewUserFromRedirect,
+  getRedirectResultOnce,
+  resolvePostAuthPath,
+} from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const googleProvider = new GoogleAuthProvider();
@@ -32,24 +36,23 @@ export default function LandingPage() {
   useEffect(() => {
     if (loading || initialCheckDone) return;
 
-    getRedirectResultOnce()
+    void getRedirectResultOnce()
       .then((result) => {
         if (result) {
-          const isNewUser = getAdditionalUserInfo(result)?.isNewUser ?? false;
-          router.replace(resolvePostAuthPath(isNewUser));
+          router.replace(resolvePostAuthPath(getIsNewUserFromRedirect(result)));
+          return;
         }
-        setInitialCheckDone(true);
+        if (user) {
+          router.replace(resolvePostAuthPath(false));
+        }
       })
       .catch((err: { code?: string }) => {
         setError(AUTH_ERRORS[err.code ?? ""] ?? "Sign-in failed. Please try again.");
+      })
+      .finally(() => {
         setInitialCheckDone(true);
       });
-  }, [loading, initialCheckDone, router]);
-
-  useEffect(() => {
-    if (!initialCheckDone || loading || !user) return;
-    router.replace(resolvePostAuthPath(false));
-  }, [initialCheckDone, loading, user, router]);
+  }, [loading, user, initialCheckDone, router]);
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -98,29 +101,36 @@ export default function LandingPage() {
       </div>
 
       <div className="mt-10 flex flex-col gap-6">
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
-          <Button
-            type="button"
-            variant="ghost"
-            className={cn("min-h-11 flex-1", mode === "signin" && "bg-background shadow-sm")}
-            onClick={() => {
-              setMode("signin");
-              setError(null);
-            }}
-          >
-            Sign In
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className={cn("min-h-11 flex-1", mode === "signup" && "bg-background shadow-sm")}
-            onClick={() => {
-              setMode("signup");
-              setError(null);
-            }}
-          >
-            Sign Up
-          </Button>
+        <div
+          role="tablist"
+          aria-label="Authentication mode"
+          className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+        >
+          {(
+            [
+              { id: "signin" as const, label: "Sign In" },
+              { id: "signup" as const, label: "Sign Up" },
+            ] as const
+          ).map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={mode === id}
+              className={cn(
+                "min-h-11 rounded-md text-sm font-medium transition-colors",
+                mode === id
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              onClick={() => {
+                setMode(id);
+                setError(null);
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
