@@ -9,6 +9,9 @@ import {
   signInWithRedirect,
 } from "firebase/auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { auth } from "@/lib/firebase/client";
 import {
@@ -17,7 +20,6 @@ import {
   getRedirectResultOnce,
   resolvePostAuthPath,
 } from "@/lib/auth";
-import { cn } from "@/lib/utils";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -101,58 +103,40 @@ export default function LandingPage() {
       </div>
 
       <div className="mt-10 flex flex-col gap-6">
-        <div
-          role="tablist"
-          aria-label="Authentication mode"
-          className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+        <Tabs
+          value={mode}
+          onValueChange={(value) => {
+            setMode(value as AuthMode);
+            setError(null);
+          }}
+          className="w-full"
         >
-          {(
-            [
-              { id: "signin" as const, label: "Sign In" },
-              { id: "signup" as const, label: "Sign Up" },
-            ] as const
-          ).map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={mode === id}
-              className={cn(
-                "min-h-11 rounded-md text-sm font-medium transition-colors",
-                mode === id
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              onClick={() => {
-                setMode(id);
-                setError(null);
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+          <TabsList className="grid h-auto w-full grid-cols-2">
+            <TabsTrigger value="signin" className="min-h-11">
+              Sign In
+            </TabsTrigger>
+            <TabsTrigger value="signup" className="min-h-11">
+              Sign Up
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <label htmlFor="email" className="text-sm font-medium">
-              Email
-            </label>
-            <input
+            <Label htmlFor="email">Email</Label>
+            <Input
               id="email"
               type="email"
               autoComplete="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="min-h-11 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="min-h-11"
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label htmlFor="password" className="text-sm font-medium">
-              Password
-            </label>
-            <input
+            <Label htmlFor="password">Password</Label>
+            <Input
               id="password"
               type="password"
               autoComplete={mode === "signup" ? "new-password" : "current-password"}
@@ -160,7 +144,7 @@ export default function LandingPage() {
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="min-h-11 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="min-h-11"
             />
           </div>
 

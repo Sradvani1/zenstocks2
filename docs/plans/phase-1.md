@@ -86,7 +86,7 @@ npx shadcn@latest init
 
 **Install minimal components for shell:**
 
-- `button`, `skeleton` (for future phases)
+- `button`, `skeleton` (Phase 1); `tabs`, `input`, `label` added in Phase 2 for landing auth
 
 **Theme plumbing** ([SPEC §4.8](docs/SPEC.md)):
 

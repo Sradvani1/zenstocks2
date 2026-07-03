@@ -20,7 +20,7 @@
 | Redirect | `isNewUser` → `/holdings`; else → `/folio` |
 | Firestore rules | `users/{uid}` owner-only |
 | Auth code | One file: `src/lib/auth.ts` |
-| Landing UI | One client `page.tsx`, `useState` Sign In / Sign Up toggle |
+| Landing UI | shadcn `Tabs` (Sign In / Sign Up) + `Input` / `Label` / `Button` |
 | Guards | `AuthProvider` + `RequireAuth` — no middleware |
 
 ---
@@ -33,11 +33,16 @@
 | `src/components/auth/AuthProvider.tsx` | NEW |
 | `src/components/auth/RequireAuth.tsx` | NEW |
 | `src/app/layout.tsx` | Wrap children in `<AuthProvider>` |
-| `src/app/page.tsx` | Auth UI; remove "Preview app shell" link |
+| `src/app/page.tsx` | Auth UI (shadcn tabs, inputs); remove "Preview app shell" link |
 | `src/app/(tabs)/layout.tsx` | Wrap in `<RequireAuth>` |
 | `src/app/holdings/page.tsx` | NEW — protected stub |
 | `src/app/(tabs)/user/page.tsx` | Email, provider, sign out |
+| `src/components/ui/tabs.tsx` | NEW — shadcn tabs for landing Sign In / Sign Up |
+| `src/components/ui/input.tsx` | NEW — shadcn input |
+| `src/components/ui/label.tsx` | NEW — shadcn label |
 | `firestore.rules` | `users/{uid}` owner read/write; deny all else |
+
+**shadcn/ui installed:** `button`, `skeleton` (Phase 1); `tabs`, `input`, `label` (Phase 2 landing).
 
 **Untouched:** `src/lib/firebase/client.ts`, tab stubs, `BottomNav`, `AppShell`.
 
@@ -69,4 +74,4 @@
 - `getCountFromServer` / empty-portfolio redirect
 - `users/{uid}/holdings/*` rules
 - Holdings CRUD form on `/holdings`
-- shadcn tabs, confirm-password, theme toggle, account deletion
+- confirm-password, theme toggle, account deletion
