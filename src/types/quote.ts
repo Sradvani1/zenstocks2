@@ -11,3 +11,12 @@ export type Quote = {
   asOfDate: string;
   updatedAt?: Timestamp;
 };
+
+export type HistoryBar = {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+};
