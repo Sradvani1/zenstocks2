@@ -5,6 +5,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   serverTimestamp,
   setDoc,
@@ -68,6 +69,12 @@ export function useHoldings(uid: string | undefined) {
       }
       if (holdings.length >= MAX_HOLDINGS) {
         throw new Error("Maximum 25 symbols");
+      }
+
+      const universeRef = doc(db, "symbols", "universe", "entries", symbol);
+      const universeSnap = await getDoc(universeRef);
+      if (!universeSnap.exists()) {
+        throw new Error("Symbol is not in the universe");
       }
 
       const prev = holdings;

@@ -1,27 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { SymbolPicker } from "@/components/holdings/SymbolPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useHoldingQuotes } from "@/hooks/useHoldingQuotes";
 import { useHoldings } from "@/hooks/useHoldings";
-import { normalizeSymbol } from "@/lib/symbols";
+import { useUniverse } from "@/hooks/useUniverse";
+import { isQuotePending } from "@/lib/quote-pending";
 
 function HoldingsContent() {
   const { user } = useAuth();
   const { holdings, loading, error, add, update, remove, atLimit, retry } =
     useHoldings(user?.uid);
+  const {
+    symbols: universeSymbols,
+    loading: universeLoading,
+    error: universeError,
+  } = useUniverse();
+
+  const holdingSymbols = useMemo(
+    () => holdings.map((h) => h.symbol),
+    [holdings],
+  );
+  const { quotes } = useHoldingQuotes(holdingSymbols);
 
   const [symbolInput, setSymbolInput] = useState("");
   const [sharesInput, setSharesInput] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
-  const [lastAddedSymbol, setLastAddedSymbol] = useState<string | null>(null);
   const [draftShares, setDraftShares] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -35,10 +48,14 @@ function HoldingsContent() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setAddError(null);
-    setLastAddedSymbol(null);
     setAdding(true);
 
     const shares = parseInt(sharesInput, 10);
+    if (!symbolInput) {
+      setAddError("Select a symbol from the universe");
+      setAdding(false);
+      return;
+    }
     if (Number.isNaN(shares) || shares < 1) {
       setAddError("Shares must be at least 1");
       setAdding(false);
@@ -47,10 +64,8 @@ function HoldingsContent() {
 
     try {
       await add(symbolInput, shares);
-      const symbol = normalizeSymbol(symbolInput);
       setSymbolInput("");
       setSharesInput("");
-      setLastAddedSymbol(symbol);
     } catch (err) {
       setAddError(err instanceof Error ? err.message : "Failed to add holding");
     } finally {
@@ -98,7 +113,6 @@ function HoldingsContent() {
       delete next[symbol];
       return next;
     });
-    if (lastAddedSymbol === symbol) setLastAddedSymbol(null);
 
     try {
       await remove(symbol);
@@ -110,7 +124,7 @@ function HoldingsContent() {
     }
   }
 
-  if (loading) {
+  if (loading || universeLoading) {
     return (
       <div className="flex flex-col gap-4">
         <Skeleton className="h-8 w-32" />
@@ -120,11 +134,11 @@ function HoldingsContent() {
     );
   }
 
-  if (error) {
+  if (error || universeError) {
     return (
       <div className="flex flex-col gap-4">
         <p className="text-sm text-destructive" role="alert">
-          {error}
+          {error ?? universeError}
         </p>
         <Button variant="outline" className="min-h-11" onClick={retry}>
           Retry
@@ -197,7 +211,7 @@ function HoldingsContent() {
                   </p>
                 )}
               </div>
-              {lastAddedSymbol === holding.symbol && (
+              {isQuotePending(quotes[holding.symbol]) && (
                 <p className="text-sm text-muted-foreground">
                   Quote data available after next market close
                 </p>
@@ -213,20 +227,13 @@ function HoldingsContent() {
           <p className="text-sm text-muted-foreground">Maximum 25 symbols</p>
         ) : (
           <form onSubmit={handleAdd} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="add-symbol">Symbol</Label>
-              <Input
-                id="add-symbol"
-                type="text"
-                autoCapitalize="characters"
-                autoComplete="off"
-                className="min-h-11 uppercase"
-                value={symbolInput}
-                onChange={(e) => setSymbolInput(e.target.value)}
-                onBlur={() => setSymbolInput(normalizeSymbol(symbolInput))}
-                disabled={adding}
-              />
-            </div>
+            <SymbolPicker
+              symbols={universeSymbols}
+              loading={universeLoading}
+              value={symbolInput}
+              onChange={setSymbolInput}
+              disabled={adding}
+            />
             <div className="flex flex-col gap-2">
               <Label htmlFor="add-shares">Shares</Label>
               <Input
