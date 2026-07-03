@@ -14,12 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { auth } from "@/lib/firebase/client";
-import {
-  AUTH_ERRORS,
-  getIsNewUserFromRedirect,
-  getRedirectResultOnce,
-  resolvePostAuthPath,
-} from "@/lib/auth";
+import { AUTH_ERRORS } from "@/lib/auth";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -33,28 +28,13 @@ export default function LandingPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [initialCheckDone, setInitialCheckDone] = useState(false);
+
+  const authedUser = user ?? auth.currentUser;
 
   useEffect(() => {
-    if (loading || initialCheckDone) return;
-
-    void getRedirectResultOnce()
-      .then((result) => {
-        if (result) {
-          router.replace(resolvePostAuthPath(getIsNewUserFromRedirect(result)));
-          return;
-        }
-        if (user) {
-          router.replace(resolvePostAuthPath(false));
-        }
-      })
-      .catch((err: { code?: string }) => {
-        setError(AUTH_ERRORS[err.code ?? ""] ?? "Sign-in failed. Please try again.");
-      })
-      .finally(() => {
-        setInitialCheckDone(true);
-      });
-  }, [loading, user, initialCheckDone, router]);
+    if (loading || !authedUser) return;
+    router.replace("/folio");
+  }, [loading, authedUser, router]);
 
   async function handleEmailSubmit(e: React.FormEvent, submitMode: AuthMode) {
     e.preventDefault();
@@ -63,10 +43,10 @@ export default function LandingPage() {
     try {
       if (submitMode === "signup") {
         await createUserWithEmailAndPassword(auth, email, password);
-        router.replace(resolvePostAuthPath(true));
+        router.replace("/holdings");
       } else {
         await signInWithEmailAndPassword(auth, email, password);
-        router.replace(resolvePostAuthPath(false));
+        router.replace("/folio");
       }
     } catch (err) {
       const code = (err as { code?: string }).code ?? "";
@@ -81,7 +61,7 @@ export default function LandingPage() {
     void signInWithRedirect(auth, googleProvider);
   }
 
-  if (loading || (user && !initialCheckDone)) {
+  if (loading) {
     return (
       <div className="mx-auto flex min-h-dvh w-full max-w-[430px] items-center justify-center px-6">
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -89,8 +69,12 @@ export default function LandingPage() {
     );
   }
 
-  if (user) {
-    return null;
+  if (authedUser) {
+    return (
+      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] items-center justify-center px-6">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
   }
 
   return (
@@ -121,16 +105,8 @@ export default function LandingPage() {
 
         {(
           [
-            {
-              id: "signin" as const,
-              heading: "Welcome back",
-              submitLabel: "Sign in",
-            },
-            {
-              id: "signup" as const,
-              heading: "Create your account",
-              submitLabel: "Create account",
-            },
+            { id: "signin" as const, heading: "Welcome back", submitLabel: "Sign in" },
+            { id: "signup" as const, heading: "Create your account", submitLabel: "Create account" },
           ] as const
         ).map(({ id, heading, submitLabel }) => (
           <TabsContent key={id} value={id} className="mt-6 flex flex-col gap-6">

@@ -1,33 +1,6 @@
-import { getAdditionalUserInfo, getRedirectResult, type User, type UserCredential } from "firebase/auth";
+import type { User } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/client";
-
-let cachedRedirectResult: UserCredential | null | undefined;
-
-function resolveRedirectResult(): Promise<UserCredential | null> {
-  if (typeof window === "undefined") {
-    return Promise.resolve(null);
-  }
-  return auth.authStateReady().then(() => getRedirectResult(auth));
-}
-
-let redirectResultPromise: Promise<UserCredential | null> | null = null;
-
-function getRedirectResultPromise(): Promise<UserCredential | null> {
-  redirectResultPromise ??= resolveRedirectResult();
-  return redirectResultPromise;
-}
-
-export async function getRedirectResultOnce(): Promise<UserCredential | null> {
-  if (cachedRedirectResult === undefined) {
-    cachedRedirectResult = await getRedirectResultPromise();
-  }
-  return cachedRedirectResult;
-}
-
-export function getIsNewUserFromRedirect(result: UserCredential): boolean {
-  return getAdditionalUserInfo(result)?.isNewUser ?? false;
-}
+import { db } from "@/lib/firebase/client";
 
 export const AUTH_ERRORS: Record<string, string> = {
   "auth/invalid-credential": "Invalid email or password.",
@@ -37,8 +10,7 @@ export const AUTH_ERRORS: Record<string, string> = {
   "auth/user-disabled": "This account has been disabled.",
   "auth/too-many-requests": "Too many attempts. Please try again later.",
   "auth/network-request-failed": "Network error. Check your connection.",
-  "auth/popup-closed-by-user": "Sign-in was cancelled.",
-  "auth/unauthorized-domain": "This domain is not authorized for sign-in. Contact support.",
+  "auth/unauthorized-domain": "This domain is not authorized for sign-in.",
   "auth/operation-not-allowed": "Google sign-in is not enabled.",
 };
 
@@ -68,8 +40,4 @@ export async function bootstrapUserDoc(user: User): Promise<void> {
   } else {
     await setDoc(userRef, data, { merge: true });
   }
-}
-
-export function resolvePostAuthPath(isNewUser: boolean): string {
-  return isNewUser ? "/holdings" : "/folio";
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { getRedirectResult, onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
-import { bootstrapUserDoc, getRedirectResultOnce } from "@/lib/auth";
+import { bootstrapUserDoc } from "@/lib/auth";
 
 type AuthContextValue = {
   user: User | null;
@@ -21,24 +21,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let unsub = () => {};
+    let cancelled = false;
 
     void (async () => {
-      await getRedirectResultOnce();
+      await auth.authStateReady();
+      if (cancelled) return;
+
+      try {
+        await getRedirectResult(auth);
+      } catch (err) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("getRedirectResult failed:", err);
+        }
+      }
+
+      if (cancelled) return;
+
       unsub = onAuthStateChanged(auth, (firebaseUser) => {
         setUser(firebaseUser);
         if (firebaseUser) {
-          void bootstrapUserDoc(firebaseUser).catch((err) => {
+          void bootstrapUserDoc(firebaseUser).catch((bootstrapErr) => {
             if (process.env.NODE_ENV === "development") {
-              console.error("bootstrapUserDoc failed:", err);
+              console.error("bootstrapUserDoc failed:", bootstrapErr);
             }
           });
         }
       });
-      await auth.authStateReady();
+
+      setUser(auth.currentUser);
       setLoading(false);
     })();
 
-    return () => unsub();
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, []);
 
   return <AuthContext.Provider value={{ user, loading }}>{children}</AuthContext.Provider>;
