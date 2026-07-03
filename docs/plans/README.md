@@ -9,7 +9,7 @@ Implementation plans derived from [SPEC.md](../SPEC.md) §9. Each phase ships as
 | 3 | Holdings CRUD | Complete | [phase-3.md](phase-3.md) |
 | 4 | yfinance market data pipeline | Complete | [phase-4.md](phase-4.md) |
 | 5 | Portfolio dashboard | Complete | [phase-5.md](phase-5.md) |
-| 6 | Stock detail + charts | Planned | — |
+| 6 | Stock detail + charts | Complete | [phase-6.md](phase-6.md) |
 | 7 | Gemini news pipeline | Planned | — |
 | 8 | News feed UI | Planned | — |
 | 9 | OpenAI chat + vector store | Planned | — |
