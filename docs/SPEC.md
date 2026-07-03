@@ -415,13 +415,15 @@ Deliverables:
 **Goal:** Users can sign up, sign in (email + Google), sign out; routes protected.
 
 Deliverables:
-- Firebase Auth integration (client SDK)
+- Firebase Auth integration (client SDK) — `onAuthStateChanged` only; no middleware
 - Landing page (login/signup tabs)
-- Auth context provider + route guards
-- `users/{uid}` document created on first sign-in (Auth trigger or client upsert)
-- Redirect: new user → `/holdings`; returning user with holdings → `/folio`
+- `AuthProvider` + `RequireAuth` route guards
+- `users/{uid}` document created on first sign-in (client upsert in auth listener)
+- Post-auth redirect: signed-in user on `/` → `/folio` (new vs returning `/holdings` vs `/folio` deferred to Phase 3)
 
-**Exit criteria:** E2E auth flow works on preview; unauthenticated access to `/folio` redirects to `/`.
+**Exit criteria:** Auth flow works on preview; unauthenticated access to `/folio` redirects to `/`.
+
+**Implementation note (2026-07-03):** Shipped with minimal Firebase-native flow — `signInWithPopup` for Google, navigation driven by auth state only. See [phase-2.md](plans/phase-2.md).
 
 ---
 

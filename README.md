@@ -2,7 +2,7 @@
 
 A mobile-first portfolio progressive web app. Track holdings, view daily end-of-close performance, read AI-curated news briefings, and chat with a portfolio-aware financial analyst.
 
-**Status:** Phase 1 merged to `main` ([PR #1](https://github.com/Sradvani1/zenstocks2/pull/1)). **Next:** Phase 2 — Auth (email + Google).
+**Status:** Phase 2 complete on `main` ([PR #2](https://github.com/Sradvani1/zenstocks2/pull/2)). **Next:** Phase 3 — Holdings CRUD.
 
 ## Documentation
 
@@ -11,6 +11,7 @@ A mobile-first portfolio progressive web app. Track holdings, view daily end-of-
 | [Product spec](docs/SPEC.md) | Vision, architecture, data model, sprint phases |
 | [Environment variables](docs/ENV.md) | All env vars by phase and platform |
 | [Phase 1 plan](docs/plans/phase-1.md) | PWA shell + Firebase/Vercel wiring (complete) |
+| [Phase 2 plan](docs/plans/phase-2.md) | Firebase Auth — email + Google (complete) |
 | [Sprint index](docs/plans/README.md) | Phase status and links |
 
 ## Stack
@@ -54,8 +55,8 @@ Firebase emulators for Auth, Firestore, and Functions are introduced in later ph
 | Phase | Focus | Status |
 |-------|-------|--------|
 | 1 | PWA shell, Firebase/Vercel wiring, CI | Complete ([PR #1](https://github.com/Sradvani1/zenstocks2/pull/1)) |
-| 2 | Auth (email + Google) | **Next** |
-| 3 | Holdings CRUD | Planned |
+| 2 | Auth (email + Google) | Complete ([PR #2](https://github.com/Sradvani1/zenstocks2/pull/2)) |
+| 3 | Holdings CRUD | **Next** |
 | 4 | yfinance market data pipeline | Planned |
 | 5 | Portfolio dashboard | Planned |
 | 6 | Stock detail + charts | Planned |
