@@ -1,5 +1,8 @@
 # Phase 1 — Repository and Platform Foundation
 
+**Status:** ✅ Complete — merged to `main` via [PR #1](https://github.com/Sradvani1/zenstocks2/pull/1) on 2026-07-02  
+**Merge commit:** `0490c3a`
+
 **Parent spec:** [SPEC.md](../SPEC.md)
 
 > Stack deviations from locked Phase 1 literals (shadcn New York, `@serwist/next`): see [ADR 0001](../adr/0001-phase1-shadcn-serwist.md).
@@ -318,19 +321,18 @@ zenstocks2/
 
 ## Verification checklist (PR merge criteria)
 
-
-| Check                  | Command / action                                                     |
-| ---------------------- | -------------------------------------------------------------------- |
-| Lint passes            | `npm run lint`                                                       |
-| Types pass             | `npx tsc --noEmit`                                                   |
-| Build passes           | `npm run build`                                                      |
-| Dev shell renders      | `npm run dev` → 390px viewport, bottom nav on `/folio`               |
-| Landing hides nav      | `/` has no bottom nav                                                |
-| Dark mode (system)     | `next-themes` applies `class` on `<html>` when OS preference changes |
-| PWA manifest valid     | Chrome DevTools → Application → Manifest                             |
-| Vercel preview deploys | Push branch → preview URL loads                                      |
-| Firestore rules deploy | `firebase deploy --only firestore:rules` succeeds                    |
-| No secrets committed   | `git grep -i api_key` clean                                          |
+| Check | Result |
+| ----- | ------ |
+| Lint passes | ✅ |
+| Types pass | ✅ |
+| Build passes | ✅ |
+| Dev shell renders (390px, bottom nav on `/folio`) | ✅ |
+| Landing hides nav | ✅ |
+| Dark mode (system) | ✅ |
+| PWA manifest valid | ✅ |
+| Vercel preview deploys | ✅ |
+| Firestore rules deploy | ⏳ Deferred — run `firebase deploy --only firestore:rules` after Firebase setup |
+| No secrets committed | ✅ |
 
 
 ---
