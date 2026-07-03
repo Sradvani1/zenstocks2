@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { auth } from "@/lib/firebase/client";
 import {
@@ -56,12 +56,12 @@ export default function LandingPage() {
       });
   }, [loading, user, initialCheckDone, router]);
 
-  async function handleEmailSubmit(e: React.FormEvent) {
+  async function handleEmailSubmit(e: React.FormEvent, submitMode: AuthMode) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      if (mode === "signup") {
+      if (submitMode === "signup") {
         await createUserWithEmailAndPassword(auth, email, password);
         router.replace(resolvePostAuthPath(true));
       } else {
@@ -102,82 +102,98 @@ export default function LandingPage() {
         </p>
       </div>
 
-      <div className="mt-10 flex flex-col gap-6">
-        <Tabs
-          value={mode}
-          onValueChange={(value) => {
-            setMode(value as AuthMode);
-            setError(null);
-          }}
-          className="w-full"
-        >
-          <TabsList className="grid h-auto w-full grid-cols-2">
-            <TabsTrigger value="signin" className="min-h-11">
-              Sign In
-            </TabsTrigger>
-            <TabsTrigger value="signup" className="min-h-11">
-              Sign Up
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <Tabs
+        value={mode}
+        onValueChange={(value) => {
+          setMode(value as AuthMode);
+          setError(null);
+        }}
+        className="mt-10 w-full"
+      >
+        <TabsList className="!h-11 grid w-full grid-cols-2">
+          <TabsTrigger value="signin" className="h-10 px-4">
+            Sign In
+          </TabsTrigger>
+          <TabsTrigger value="signup" className="h-10 px-4">
+            Sign Up
+          </TabsTrigger>
+        </TabsList>
 
-        <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="min-h-11"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="min-h-11"
-            />
-          </div>
+        {(
+          [
+            {
+              id: "signin" as const,
+              heading: "Welcome back",
+              submitLabel: "Sign in",
+            },
+            {
+              id: "signup" as const,
+              heading: "Create your account",
+              submitLabel: "Create account",
+            },
+          ] as const
+        ).map(({ id, heading, submitLabel }) => (
+          <TabsContent key={id} value={id} className="mt-6 flex flex-col gap-6">
+            <p className="text-sm text-muted-foreground">{heading}</p>
+            <form onSubmit={(e) => handleEmailSubmit(e, id)} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor={`${id}-email`}>Email</Label>
+                <Input
+                  id={`${id}-email`}
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="min-h-11"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor={`${id}-password`}>Password</Label>
+                <Input
+                  id={`${id}-password`}
+                  type="password"
+                  autoComplete={id === "signup" ? "new-password" : "current-password"}
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="min-h-11"
+                />
+              </div>
 
-          {error && (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          )}
+              {error && mode === id && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              )}
 
-          <Button type="submit" size="lg" className="min-h-11 w-full" disabled={submitting}>
-            {submitting ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
-          </Button>
-        </form>
+              <Button type="submit" size="lg" className="min-h-11 w-full" disabled={submitting}>
+                {submitting ? "Please wait…" : submitLabel}
+              </Button>
+            </form>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">or</span>
-          </div>
-        </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">or</span>
+              </div>
+            </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="min-h-11 w-full"
-          onClick={handleGoogleSignIn}
-        >
-          Continue with Google
-        </Button>
-      </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="min-h-11 w-full"
+              onClick={handleGoogleSignIn}
+            >
+              Continue with Google
+            </Button>
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 }
