@@ -64,7 +64,7 @@
 ## Pre-flight (manual, before merge)
 
 - Firebase Console: Blaze plan (required for Cloud Functions)
-- `firebase deploy --only firestore:rules,functions:onHoldingWrite`
+- `firebase deploy --only firestore:rules,functions:node:onHoldingWrite`
 
 ---
 
@@ -75,7 +75,7 @@
 - [x] `/user` → "Update holdings" → `/holdings`
 - [x] `firebase deploy --only firestore:rules` (required for holdings permissions)
 - [ ] Post-auth redirect (0 holdings → `/holdings`, else `/folio`) — preview smoke test
-- [ ] `firebase deploy --only functions:onHoldingWrite` — manual post-merge
+- [ ] `firebase deploy --only functions:node:onHoldingWrite` — requires Blaze plan; codebase prefix `node` matches `firebase.json`
 - [ ] `symbols/active` holderCount in Firestore console after add/delete
 
 ---
