@@ -1,6 +1,6 @@
 # Phase 4 — Market Data Pipeline
 
-**Status:** In progress  
+**Status:** Complete — merged 2026-07-03  
 **Branch:** `phase-4/market-data`  
 **Parent spec:** [SPEC.md](../SPEC.md) §3 ingestion, §5 quotes/universe, §6 `refreshMarketData`, §7 rules, §9 Phase 4  
 **ADR:** [0002-fixed-symbol-universe.md](../adr/0002-fixed-symbol-universe.md)  
