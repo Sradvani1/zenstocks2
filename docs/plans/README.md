@@ -10,9 +10,9 @@ Implementation plans derived from [SPEC.md](../SPEC.md) §9. Each phase ships as
 | 4 | yfinance market data pipeline | Complete | [phase-4.md](phase-4.md) |
 | 5 | Portfolio dashboard | Complete | [phase-5.md](phase-5.md) |
 | 6 | Stock detail + charts | Complete | [phase-6.md](phase-6.md) |
-| 7 | Gemini news pipeline | Planned | — |
-| 8 | News feed UI | Planned | — |
-| 9 | OpenAI chat + vector store | Planned | — |
+| 7 | Gemini news pipeline | Complete | — |
+| 8 | News feed UI | Complete | — |
+| 9 | OpenAI chat + vector store | Complete | — |
 | 10 | Production hardening | Planned | — |
 
 ## Branch naming
