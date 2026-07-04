@@ -10,8 +10,10 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useHoldings } from "@/hooks/useHoldings";
 import { useSymbolHistory, filterByRange } from "@/hooks/useSymbolHistory";
 import type { Range } from "@/hooks/useSymbolHistory";
+import { useSymbolArticles } from "@/hooks/useSymbolArticle";
 import { StockPriceBlock } from "@/components/stock/StockPriceBlock";
 import { StockChart } from "@/components/stock/StockChart";
+import { ArticleCard } from "@/components/news/ArticleCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Quote } from "@/types/quote";
@@ -27,6 +29,7 @@ function StockDetailContent() {
 
   const { holdings, loading: holdingsLoading, error: holdingsError, retry } = useHoldings(uid);
   const { bars, loading: historyLoading } = useSymbolHistory(symbol);
+  const { articles, loading: articlesLoading } = useSymbolArticles(symbol);
   const [range, setRange] = useState<Range>("1Y");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(true);
@@ -116,6 +119,18 @@ function StockDetailContent() {
 
       <div className="mt-4">
         <StockChart bars={filteredBars} loading={historyLoading} range={range} />
+      </div>
+
+      <div className="mt-6 flex flex-col gap-3">
+        {articlesLoading ? (
+          <Skeleton className="h-24 w-full rounded-lg" />
+        ) : articles.length > 0 ? (
+          articles.map((a) => (
+            <ArticleCard key={a.date} article={a} />
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">No articles yet</p>
+        )}
       </div>
 
       <p className="mt-6 text-center text-xs text-muted-foreground">
