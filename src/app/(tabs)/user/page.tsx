@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { signOut } from "firebase/auth";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -15,10 +16,36 @@ function formatProvider(providerId: string | undefined): string {
 
 export default function UserPage() {
   const { user } = useAuth();
+  const [clearing, setClearing] = useState(false);
+  const [clearResult, setClearResult] = useState<string | null>(null);
 
   async function handleSignOut() {
     await signOut(auth);
   }
+
+  const handleClearChats = useCallback(async () => {
+    if (clearing || !user) return;
+    if (!confirm("Delete all chat threads? This cannot be undone.")) return;
+
+    setClearing(true);
+    setClearResult(null);
+    try {
+      const token = await auth.currentUser!.getIdToken();
+      const res = await fetch("/api/chat/threads", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        throw new Error("Failed to clear chats");
+      }
+      const { deleted } = await res.json();
+      setClearResult(`Cleared ${deleted} chat${deleted !== 1 ? "s" : ""}`);
+    } catch {
+      setClearResult("Failed to clear chats");
+    } finally {
+      setClearing(false);
+    }
+  }, [clearing, user]);
 
   const providerId = user?.providerData[0]?.providerId;
 
@@ -42,6 +69,17 @@ export default function UserPage() {
         >
           Update holdings
         </Link>
+        <Button
+          variant="outline"
+          className="min-h-11 w-full"
+          onClick={handleClearChats}
+          disabled={clearing}
+        >
+          {clearing ? "Clearing..." : "Clear all chats"}
+        </Button>
+        {clearResult && (
+          <p className="text-center text-xs text-muted-foreground">{clearResult}</p>
+        )}
         <Button variant="outline" className="min-h-11 w-full" onClick={handleSignOut}>
           Sign out
         </Button>

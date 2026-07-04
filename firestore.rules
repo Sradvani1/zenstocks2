@@ -39,6 +39,20 @@ service cloud.firestore {
           && request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if isOwner(uid);
       }
+
+      match /chatThreads/{threadId} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+
+        match /messages/{messageId} {
+          allow read: if isOwner(uid);
+          allow write: if false;
+        }
+      }
+
+      match /chatRateLimit/{docId} {
+        allow read, write: if false;
+      }
     }
 
     match /symbols/universe/entries/{symbol} {
